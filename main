@@ -1,0 +1,252 @@
+package com.example.a399109.androidfarkle;
+/*Author: Allison Delgado
+* 2/11/2020
+* Android Farkle is the dice game Farkle on an android app
+*
+*/
+
+
+import android.content.DialogInterface;
+import android.graphics.Color;
+import android.support.v7.app.AlertDialog;
+import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.TextView;
+
+public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+
+   ImageButton[] buttons = new ImageButton[6];
+   int[] buttonState = new int[6]; //keep track of button's state
+   int[] dieImages = new int[6]; //keep track of drawables
+   int[] dieValue = new int[6]; //keep track of value
+   final int HOT_DIE = 0; //can be rolled
+   final int SCORE_DIE = 1;
+   final int LOCKED_DIE = 2;
+   Button roll;
+   Button score;
+   Button stop;
+   TextView currentScoreTV;
+   TextView totalScoreTV;
+   TextView currentRoundTV;
+   int currentScore;
+   int totalScore;
+   int currentRound;
+
+   @Override
+   protected void onCreate(Bundle savedInstanceState) {
+       super.onCreate(savedInstanceState);
+       setContentView(R.layout.activity_main);
+
+       buttons[0] = (ImageButton)this.findViewById(R.id.imageButton1);
+       buttons[1] = (ImageButton)this.findViewById(R.id.imageButton2);
+       buttons[2] = (ImageButton)this.findViewById(R.id.imageButton3);
+       buttons[3] = (ImageButton)this.findViewById(R.id.imageButton4);
+       buttons[4] = (ImageButton)this.findViewById(R.id.imageButton5);
+       buttons[5] = (ImageButton)this.findViewById(R.id.imageButton6);
+
+       //add listeners for each button
+       for(int i = 0; i < buttons.length; i++){
+           buttons[i].setOnClickListener(this);
+           buttons[i].setEnabled(false); //disable button
+           buttons[i].setBackgroundColor(Color.LTGRAY); //set color
+
+       }
+
+       roll = (Button)this.findViewById(R.id.button1);
+       roll.setOnClickListener(this);
+
+       score = (Button)this.findViewById(R.id.button2);
+       score.setOnClickListener(this);
+       score.setEnabled(false); //disable button
+
+       stop = (Button)this.findViewById(R.id.button3);
+       stop.setOnClickListener(this);
+       stop.setEnabled(false); //disable button
+
+       currentScoreTV = (TextView)this.findViewById(R.id.textView1);
+       totalScoreTV = (TextView)this.findViewById(R.id.textView2);
+       currentRoundTV = (TextView)this.findViewById(R.id.textView3);
+       //save images into an array
+       dieImages[0] = R.drawable.dino1;
+       dieImages[1] = R.drawable.dino2;
+       dieImages[2] = R.drawable.dino3;
+       dieImages[3] = R.drawable.dino4;
+       dieImages[4] = R.drawable.dino5;
+       dieImages[5] = R.drawable.dino6;
+   }
+
+   @Override
+   public void onClick(View v) {
+       if (v.equals(roll)) {
+           for (int i = 0; i < buttons.length; i++) {
+               if (buttonState[i] == HOT_DIE) {
+                   int choice = (int) (Math.random() * 6); //create random num, cast as an int to chop off decimal
+                   dieValue[i] = choice;
+                   buttons[i].setImageResource(dieImages[choice]); //resource to be pulled from is choice image
+                   buttons[i].setEnabled(true);
+                   //disable roll and enable score so that you can keep track of scoring dice
+                   roll.setEnabled(false);
+                   score.setEnabled(true);
+                   stop.setEnabled(false);
+
+               }
+           }
+       }
+
+       if (v.equals(score)) {
+           //check to see number of dice selected, if there's any worth 5 or if there's 3 of a kind
+           int[] valueCount = new int[7];
+           for (int i = 0; i < buttonState.length; i++) {
+               if (buttonState[i] == SCORE_DIE) {
+                   valueCount[dieValue[i] + 1]++; //add that die value to the value count
+               }
+           }
+
+           //if user tried to score a single # or a pair, that's invalid
+           if ((valueCount[2] > 0 && valueCount[2] < 3) ||
+                   (valueCount[3] > 0 && valueCount[3] < 3) ||
+                   (valueCount[4] > 0 && valueCount[4] < 3) ||
+                   (valueCount[6] > 0 && valueCount[6] < 3)) {
+               //create class called Builder
+               AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
+               alertDialogBuilder.setTitle("Invalid Dinosaurs selected!");
+               alertDialogBuilder
+                       .setMessage("You can only select scoring dinos.")
+                       .setCancelable(false)
+                       .setPositiveButton("Okay", new DialogInterface.OnClickListener() {
+
+                           //create onClick listener inside this
+                           public void onClick(DialogInterface dialog, int id) {
+                               dialog.dismiss();
+                           }
+                       });
+               AlertDialog alertDialog = alertDialogBuilder.create();
+               alertDialog.show();
+
+           } else if (valueCount[1] == 0 && valueCount[2] == 0 &&
+                   valueCount[3] == 0 && valueCount[4] == 0 &&
+                   valueCount[5] == 0 && valueCount[6] == 0) {
+               AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
+               alertDialogBuilder.setTitle("No scoring dinos!");
+               alertDialogBuilder
+                       .setMessage("Forfeit score and go to next round?")
+                       .setCancelable(false)
+                       .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                           public void onClick(DialogInterface dialog, int id) {
+                               currentScore = 0;
+                               //reset all buttons
+                               currentRound++;
+                               currentScoreTV.setText("Current score: " + currentScore);
+                               currentRoundTV.setText("Current round: " + currentRound);
+                               resetDice();
+                               dialog.dismiss();
+                           }
+                       })
+                       .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                           public void onClick(DialogInterface dialog, int id) {
+                               dialog.cancel();
+                           }
+                       });
+               AlertDialog alertDialog = alertDialogBuilder.create();
+               alertDialog.show();
+           } else { //add to current score
+               if (valueCount[1] < 3) { //if number of 1's you have is less than 3
+                   currentScore += (valueCount[1] * 100);
+               }
+               if (valueCount[5] < 3) { //if number of 5's you have is less than 3
+                   currentScore += (valueCount[5] * 50);
+               }
+               //triples:
+               if (valueCount[1] >= 3) {
+                   currentScore += (1000 * valueCount[1] - 2); //if there are exactly 3, mult 1000 by 1...
+               }
+               if (valueCount[2] >= 3) {
+                   currentScore += (200 * valueCount[2] - 2);
+               }
+               if (valueCount[3] >= 3) {
+                   currentScore += (300 * valueCount[3] - 2);
+               }
+               if (valueCount[4] >= 3) {
+                   currentScore += (400 * valueCount[4] - 2);
+               }
+               if (valueCount[5] >= 3) {
+                   currentScore += (500 * valueCount[5] - 2);
+               }
+               if (valueCount[6] >= 3) {
+                   currentScore += (600 * valueCount[6] - 2);
+               }
+               //update current score text view
+               currentScoreTV.setText("Current score: " + currentScore);
+               for (int a = 0; a < buttons.length; a++) {
+                   if (buttonState[a] == SCORE_DIE) {
+                       buttonState[a] = LOCKED_DIE;
+                       //change background color
+                       buttons[a].setBackgroundColor(Color.BLUE);
+                       //disable all buttons that were part of that valid score
+                       buttons[a].setEnabled(false);
+                   }
+               }
+               //check to see if they have all been enabled
+               int lockedCount = 0;
+               for (int i = 0; i < buttons.length; i++) {
+                   if (buttonState[i] == LOCKED_DIE) {
+                       lockedCount++;
+                   }
+               }
+               if (lockedCount == 6) {
+                   for (int i = 0; i < buttons.length; i++) {
+                       buttonState[i] = HOT_DIE;
+                       buttons[i].setBackgroundColor(Color.LTGRAY);
+                   }
+               }
+
+               //you can roll, stop, but not score
+               roll.setEnabled(true);
+               score.setEnabled(false);
+               stop.setEnabled(true);
+           }
+       }
+       else if (v.equals(stop)) {
+               totalScore += currentScore;
+               currentScore = 0;
+               currentScoreTV.setText("Current score: " + currentScore);
+               totalScoreTV.setText("Total score: " + totalScore);
+               currentRound++;
+               currentRoundTV.setText("Current round: " + currentRound);
+
+               //go thru all buttons, set color back, disable, then hot dice
+               resetDice();
+           } else { //walk through each of the buttons
+               for (int a = 0; a < buttons.length; a++) {
+                   if (v.equals(buttons[a])) {
+                       //switch from hot die to scoring die
+                       if (buttonState[a] == HOT_DIE) {
+                           buttons[a].setBackgroundColor(Color.MAGENTA);
+                           buttonState[a] = SCORE_DIE;
+                       } else { //set color back to light gray and swap to hot die again
+                           buttons[a].setBackgroundColor(Color.LTGRAY);
+                           buttonState[a] = HOT_DIE;
+                       }
+                   }
+
+               }
+           }
+       }
+
+//reset dice by setting back to hot die and putting color back
+   private void resetDice(){
+       for (int a = 0; a < buttons.length; a++) {
+           buttons[a].setEnabled(false);
+           buttonState[a] = HOT_DIE;
+           buttons[a].setBackgroundColor(Color.LTGRAY);
+           roll.setEnabled(true);
+           score.setEnabled(false);
+           stop.setEnabled(false);
+       }
+   }
+}
+
+
